@@ -292,7 +292,7 @@ Available commands:
   return (
     <div className="App">
       <header className="app-header glass-panel">
-        <h1><span className="text-primary">{"<"}</span>CodeHabit<span className="text-primary">{"/>"}</span></h1>
+        <h1><span className="text-primary">{"<"}</span>Habit Tracker<span className="text-primary">{"/>"}</span></h1>
         <div className="header-controls">
           <div className="branch-selector">
             <span className="branch-label">Branch:</span>
