@@ -22,6 +22,8 @@ function App() {
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [currentBranch, setCurrentBranch] = useState('main');
   const [mergeConflicts, setMergeConflicts] = useState([]);
+  const [activeMergeConflict, setActiveMergeConflict] = useState(null);
+  const [showQuickActions, setShowQuickActions] = useState(false);
   
   // Save to localStorage when data changes
   useEffect(() => {
@@ -44,7 +46,14 @@ function App() {
       // Quick log - Ctrl+L or Cmd+L
       if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
         e.preventDefault();
-        // Toggle quick log functionality
+        setShowQuickActions(prev => !prev);
+      }
+      
+      // Escape key to close modals
+      if (e.key === 'Escape') {
+        setShowCommandPalette(false);
+        setShowQuickActions(false);
+        setActiveMergeConflict(null);
       }
     };
     
@@ -178,6 +187,106 @@ Available commands:
         conflict.date === conflictDate ? { ...conflict, resolved: true } : conflict
       )
     );
+    
+    setActiveMergeConflict(null);
+  };
+
+  const renderMergeConflictModal = () => {
+    if (!activeMergeConflict) return null;
+    
+    return (
+      <div className="modal-backdrop">
+        <div className="modal-content glass-panel">
+          <h2>Resolve Missed Day</h2>
+          <p>What did you accomplish on {new Date(activeMergeConflict.date).toLocaleDateString()}?</p>
+          
+          <div className="conflict-habits-grid">
+            {habits.filter(h => h.active).map(habit => (
+              <div key={habit.id} className="conflict-habit-item">
+                <div className="habit-header">
+                  <span className="habit-icon">{habit.icon}</span>
+                  <span className="habit-name">{habit.name}</span>
+                </div>
+                <div className="intensity-selector">
+                  {[1, 2, 3, 4, 5].map(level => (
+                    <button 
+                      key={level}
+                      className={`intensity-btn intensity-${level}`}
+                      onClick={() => {
+                        resolveMergeConflict(activeMergeConflict.date, [{
+                          habitId: habit.id,
+                          intensity: level
+                        }]);
+                      }}
+                    >
+                      {level}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <div className="modal-actions">
+            <button 
+              className="btn btn-secondary"
+              onClick={() => setActiveMergeConflict(null)}
+            >
+              Cancel
+            </button>
+            <button 
+              className="btn btn-primary"
+              onClick={() => {
+                const defaultResolutions = habits
+                  .filter(h => h.active)
+                  .map(h => ({ habitId: h.id, intensity: 1 }));
+                resolveMergeConflict(activeMergeConflict.date, defaultResolutions);
+              }}
+            >
+              Mark All as Done
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderQuickActionsMenu = () => {
+    if (!showQuickActions) return null;
+    
+    return (
+      <div className="quick-actions-menu glass-panel">
+        <h3>Quick Actions</h3>
+        <div className="quick-actions-grid">
+          {habits.filter(h => h.active).map(habit => (
+            <div key={habit.id} className="quick-action-item">
+              <div className="habit-icon-large">{habit.icon}</div>
+              <div className="habit-name">{habit.name}</div>
+              <div className="intensity-buttons">
+                {[1, 2, 3].map(intensity => (
+                  <button
+                    key={intensity}
+                    className={`intensity-btn intensity-${intensity}`}
+                    onClick={() => {
+                      trackHabit(habit.id, new Date().toISOString(), intensity);
+                      setShowQuickActions(false);
+                    }}
+                  >
+                    {Array(intensity).fill('✅').join('')}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <button 
+          className="btn btn-close"
+          onClick={() => setShowQuickActions(false)}
+        >
+          Close
+        </button>
+      </div>
+    );
   };
 
   return (
@@ -185,12 +294,25 @@ Available commands:
       <header className="app-header glass-panel">
         <h1><span className="text-primary">{"<"}</span>CodeHabit<span className="text-primary">{"/>"}</span></h1>
         <div className="header-controls">
+          <div className="branch-selector">
+            <span className="branch-label">Branch:</span>
+            <select 
+              value={currentBranch}
+              onChange={(e) => setCurrentBranch(e.target.value)}
+              className="branch-select"
+            >
+              <option value="main">main</option>
+              <option value="work">work</option>
+              <option value="personal">personal</option>
+              <option value="health">health</option>
+            </select>
+          </div>
           <button 
             className="btn btn-icon" 
             onClick={() => setShowCommandPalette(true)}
             title="Command Palette (Ctrl+P)"
           >
-            Ctrl + P
+            <span className="shortcut-key">⌘P</span>
           </button>
         </div>
       </header>
@@ -198,7 +320,12 @@ Available commands:
       <main className="app-content">
         <div className="dashboard-container">
           <section className="dashboard-section glass-panel">
-            <h2>Contribution Graph <span className="branch-indicator">@{currentBranch}</span></h2>
+            <div className="section-header">
+              <h2>Contribution Graph</h2>
+              <div className="section-controls">
+                <span className="branch-indicator">@{currentBranch}</span>
+              </div>
+            </div>
             <ContributionGrid 
               entries={entries} 
               habits={habits}
@@ -206,41 +333,70 @@ Available commands:
             />
           </section>
           
-          <section className="habits-section glass-panel">
-            <h2>Habits</h2>
-            <HabitPanel 
-              habits={habits} 
-              setHabits={setHabits}
-              trackHabit={trackHabit}
-              entries={entries}
-            />
-          </section>
-          
-          {mergeConflicts.filter(c => !c.resolved).length > 0 && (
-            <section className="conflicts-section glass-panel neon-border">
-              <h2>Merge Conflicts</h2>
-              <div className="merge-conflicts">
-                {mergeConflicts.filter(c => !c.resolved).map(conflict => (
-                  <div key={conflict.date} className="merge-conflict-item">
-                    <p>Missed tracking on {new Date(conflict.date).toLocaleDateString()}</p>
-                    <button 
-                      className="btn btn-primary" 
-                      onClick={() => {
-                        // Show a UI to resolve this conflict
-                        // For MVP, we'll just resolve with default values
-                        const defaultResolutions = habits
-                          .filter(h => h.active)
-                          .map(h => ({ habitId: h.id, intensity: 1 }));
-                        resolveMergeConflict(conflict.date, defaultResolutions);
-                      }}
-                    >
-                      Resolve
-                    </button>
+          <div className="side-panels">
+            <section className="habits-section glass-panel">
+              <div className="section-header">
+                <h2>Habits</h2>
+                <div className="section-controls">
+                  <button 
+                    className="btn btn-small"
+                    onClick={() => setShowCommandPalette(true)}
+                    title="Add New Habit"
+                  >
+                    + Add
+                  </button>
+                </div>
+              </div>
+              <HabitPanel 
+                habits={habits} 
+                setHabits={setHabits}
+                trackHabit={trackHabit}
+                entries={entries}
+              />
+            </section>
+            
+            {mergeConflicts.filter(c => !c.resolved).length > 0 && (
+              <section className="conflicts-section glass-panel pulse-animation">
+                <h2>Missed Days</h2>
+                <div className="merge-conflicts">
+                  {mergeConflicts.filter(c => !c.resolved).map(conflict => (
+                    <div key={conflict.date} className="merge-conflict-item">
+                      <div className="conflict-date">
+                        <span className="conflict-icon">⚠️</span>
+                        <span>{new Date(conflict.date).toLocaleDateString()}</span>
+                      </div>
+                      <button 
+                        className="btn btn-primary" 
+                        onClick={() => setActiveMergeConflict(conflict)}
+                      >
+                        Resolve
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+            
+            <section className="stats-section glass-panel">
+              <h2>Stats</h2>
+              <div className="stats-grid">
+                <div className="stat-item">
+                  <div className="stat-value">{entries.length}</div>
+                  <div className="stat-label">Total Entries</div>
+                </div>
+                <div className="stat-item">
+                  <div className="stat-value">
+                    {entries.filter(e => new Date(e.date).toDateString() === new Date().toDateString()).length}
                   </div>
-                ))}
+                  <div className="stat-label">Today</div>
+                </div>
+                <div className="stat-item">
+                  <div className="stat-value">{habits.filter(h => h.active).length}</div>
+                  <div className="stat-label">Active Habits</div>
+                </div>
               </div>
             </section>
-          )}
+          </div>
         </div>
       </main>
       
@@ -251,10 +407,13 @@ Available commands:
         />
       )}
       
+      {renderMergeConflictModal()}
+      {renderQuickActionsMenu()}
+      
       <div className="quick-log-btn">
         <button 
-          className="btn btn-primary btn-circle"
-          onClick={() => setShowCommandPalette(true)}
+          className="btn btn-primary btn-circle pulse-animation"
+          onClick={() => setShowQuickActions(true)}
           title="Quick Log (Ctrl+L)"
         >
           +
