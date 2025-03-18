@@ -3,6 +3,7 @@ import { useState } from 'react';
 const HabitPanel = ({ habits, setHabits, trackHabit, entries }) => {
   const [newHabit, setNewHabit] = useState({ name: '', icon: '✅' });
   const [showForm, setShowForm] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
   
   const calculateStreak = (habitId) => {
     const today = new Date();
@@ -43,6 +44,11 @@ const HabitPanel = ({ habits, setHabits, trackHabit, entries }) => {
 
   const handleTrackHabit = (habitId, intensity = 1) => {
     trackHabit(habitId, new Date().toISOString(), intensity);
+  };
+
+  const handleRemoveHabit = (id) => {
+    setHabits(habits.filter(habit => habit.id !== id));
+    setConfirmDelete(null);
   };
 
   const iconOptions = ['✅', '🏃', '💧', '📚', '🧘', '🍎', '💪', '🧠', '😴', '🚭'];
@@ -97,12 +103,38 @@ const HabitPanel = ({ habits, setHabits, trackHabit, entries }) => {
                     </button>
                   ))}
                 </div>
-                <button 
-                  className={`px-4 py-2 rounded-md transition-all duration-200 shadow-sm ${habit.active ? 'bg-gradient-to-br from-red-400 to-red-600 hover:from-red-500 hover:to-red-700 text-white' : 'bg-gradient-to-br from-green-400 to-green-600 hover:from-green-500 hover:to-green-700 text-white'}`}
-                  onClick={() => toggleHabitActive(habit.id)}
-                >
-                  {habit.active ? 'Pause' : 'Resume'}
-                </button>
+                <div className="flex space-x-2">
+                  <button 
+                    className={`px-4 py-2 rounded-md transition-all duration-200 shadow-sm ${habit.active ? 'bg-gradient-to-br from-amber-400 to-amber-600 hover:from-amber-500 hover:to-amber-700 text-white' : 'bg-gradient-to-br from-green-400 to-green-600 hover:from-green-500 hover:to-green-700 text-white'}`}
+                    onClick={() => toggleHabitActive(habit.id)}
+                  >
+                    {habit.active ? 'Pause' : 'Resume'}
+                  </button>
+                  {confirmDelete === habit.id ? (
+                    <div className="flex space-x-1">
+                      <button 
+                        className="px-3 py-2 rounded-md bg-gradient-to-br from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 text-white transition-all duration-200 shadow-sm"
+                        onClick={() => handleRemoveHabit(habit.id)}
+                      >
+                        Confirm
+                      </button>
+                      <button 
+                        className="px-3 py-2 rounded-md bg-gradient-to-br from-gray-200 to-gray-300 hover:from-gray-300 hover:to-gray-400 transition-all duration-200 shadow-sm"
+                        onClick={() => setConfirmDelete(null)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button 
+                      className="px-3 py-2 rounded-md bg-gradient-to-br from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 text-white transition-all duration-200 shadow-sm"
+                      onClick={() => setConfirmDelete(habit.id)}
+                      title="Remove this habit"
+                    >
+                      <span className="text-lg">🗑️</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           );
