@@ -48,7 +48,7 @@ git clone https://github.com/aashiq-edavalapati/habit-tracker.git
 
 ### 2. Navigate to the Project Directory
 ```sh
-cd aashiq-edavalapati-habit-tracker/frontend
+cd habit-tracker/frontend
 ```
 
 ### 3. Install Dependencies
