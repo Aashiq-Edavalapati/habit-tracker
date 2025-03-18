@@ -114,7 +114,7 @@ const ContributionGrid = ({ entries, habits, currentBranch }) => {
     <div className="contribution-container">
       <div className="contribution-grid-wrapper">
         <div className="contribution-grid">
-          {gridData.map((day, index) => (
+          {gridData.map((day) => (
             <div
               key={day.date}
               className={`contribution-cell ${getActivityClass(day.activityLevel)}`}
