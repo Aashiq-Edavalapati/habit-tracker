@@ -21,7 +21,6 @@ function App() {
   
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [currentBranch, setCurrentBranch] = useState('main');
-  const [isDarkMode, setIsDarkMode] = useState(true);
   const [mergeConflicts, setMergeConflicts] = useState([]);
   
   // Save to localStorage when data changes
