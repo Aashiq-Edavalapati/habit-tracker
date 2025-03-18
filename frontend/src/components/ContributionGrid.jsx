@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 
-const ContributionGrid = ({ entries, habits, currentBranch }) => {
+const ContributionGrid = ({ 
+  entries = [], 
+  habits = [],
+  currentBranch = 'main' 
+}) => {
   const [gridData, setGridData] = useState([]);
   const [tooltipContent, setTooltipContent] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
